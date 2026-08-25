@@ -10,7 +10,7 @@ name: Generate API Docs
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
     paths:
       - "**.h"
       - "**.hpp"
