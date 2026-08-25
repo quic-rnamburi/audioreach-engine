@@ -42,7 +42,7 @@ jobs:
         id: parse_headers
         run: |
           python3 - <<'EOF'
-          import yaml, sys, os
+          import yaml, sys, os, glob
 
           config_path = "public_headers/config.yml"
           if not os.path.exists(config_path):
@@ -52,13 +52,13 @@ jobs:
           with open(config_path) as f:
               config = yaml.safe_load(f)
 
-          headers = set()
+          patterns = set()
 
           def collect(obj):
               if isinstance(obj, dict):
                   for k, v in obj.items():
                       if k == "headers" and isinstance(v, list):
-                          headers.update(str(h) for h in v)
+                          patterns.update(str(h) for h in v)
                       else:
                           collect(v)
               elif isinstance(obj, list):
@@ -67,8 +67,21 @@ jobs:
 
           collect(config)
 
-          if not headers:
+          if not patterns:
               print("ERROR: no 'headers' entries found in config.yml", file=sys.stderr)
+              sys.exit(1)
+
+          # Expand globs to actual files (also works for direct paths)
+          headers = set()
+          for pattern in patterns:
+              matched = glob.glob(pattern, recursive=True)
+              if matched:
+                  headers.update(matched)
+              else:
+                  print(f"WARNING: no files matched pattern: {pattern}", file=sys.stderr)
+
+          if not headers:
+              print("ERROR: no header files found after glob expansion", file=sys.stderr)
               sys.exit(1)
 
           # Write one path per line; also print for log visibility
@@ -159,4 +172,5 @@ jobs:
           publish_dir: api-docs/html
           publish_branch: gh-pages
           commit_message: "docs: update API reference [${{ github.sha }}]"
+
 
